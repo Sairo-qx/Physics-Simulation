@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Physics Simulator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Finger+Paint&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #2a2a2a, #c946a8);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Finger Paint', cursive;
+        }
+        
+        .welcome-screen {
+            text-align: center;
+            opacity: 1;
+            transition: opacity 0.5s;
+        }
+        
+        .welcome-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+            position: absolute;
+        }
+        
+        h1 {
+            color: white;
+            font-size: 3rem;
+            margin-bottom: 2rem;
+            opacity: 0;
+            animation: fadeInUp 1s ease-out forwards;
+        }
+        
+        button {
+            background: white;
+            color: #2a2a2a;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            font-family: 'Finger Paint', cursive;
+            border-radius: 30px;
+            cursor: pointer;
+            opacity: 0;
+            animation: fadeInUp 1s ease-out 0.3s forwards;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3), 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+        
+        button:hover {
+            transform: translateY(-2px) scale(1.1);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4), 0 0 30px rgba(255, 255, 255, 0.8);
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .simulator-screen {
+            display: none;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        
+        .simulator-screen.active {
+            display: flex;
+            opacity: 1;
+        }
+        
+        .settings-panel {
+            width: 350px;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            overflow-y: auto;
+            color: white;
+        }
+        
+        /* Custom Scrollbar */
+        .settings-panel::-webkit-scrollbar {
+            width: 12px;
+        }
+        
+        .settings-panel::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        
+        .settings-panel::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #888, #555);
+            border-radius: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .settings-panel::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #999, #666);
+        }
+        
+        .settings-panel::-webkit-scrollbar-button {
+            background: rgba(255, 255, 255, 0.2);
+            height: 16px;
+        }
+        
+        .settings-panel::-webkit-scrollbar-button:vertical:decrement {
+            border-radius: 10px 10px 0 0;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill="%23fff" d="M8 4l-6 6h12z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        
+        .settings-panel::-webkit-scrollbar-button:vertical:increment {
+            border-radius: 0 0 10px 10px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill="%23fff" d="M8 12l6-6H2z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        
+        .preview-panel {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        
+        canvas {
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+        }
+        
+        .setting-group {
+            margin-bottom: 25px;
+        }
+        
+        .setting-group h3 {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            color: #fff;
+        }
+        
+        .setting-item {
+            margin-bottom: 15px;
+        }
+        
+        .setting-item label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .setting-item input[type="range"] {
+            width: 100%;
+            margin-top: 5px;
+        }
+        
+        .setting-item input[type="number"] {
+            width: 80px;
+            padding: 5px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            color: white;
+            font-family: 'Finger Paint', cursive;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        
+        .radio-group input[type="radio"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        select {
+            width: 100%;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            color: white;
+            font-family: 'Finger Paint', cursive;
+            cursor: pointer;
+        }
+        
+        select option {
+            background: #2a2a2a;
+            color: white;
+        }
+        
+        .value-display {
+            display: inline-block;
+            margin-left: 10px;
+            color: #c946a8;
+        }
+    </style>
+</head>
+<body>
+    <div class="welcome-screen" id="welcomeScreen">
+        <h1>Welcome</h1>
+        <button id="getStartedBtn">Get Started</button>
+    </div>
+
+    <div class="simulator-screen" id="simulatorScreen">
+        <div class="settings-panel">
+            <h2 style="margin-bottom: 25px;">Settings</h2>
+            
+            <div class="setting-group">
+                <h3>Outer Shape</h3>
+                
+                <div class="setting-item">
+                    <label>Corners: <span class="value-display" id="outerCornersValue">4</span></label>
+                    <input type="range" id="outerCorners" min="3" max="100" value="4">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="outerCircle">
+                        <label for="outerCircle">No corners (Circle)</label>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <label>Line Width: <span class="value-display" id="lineWidthValue">8</span></label>
+                    <input type="range" id="lineWidth" min="2" max="20" value="8">
+                </div>
+                
+                <div class="setting-item">
+                    <label>Light</label>
+                    <select id="outerLight">
+                        <option value="off">Off</option>
+                        <option value="on" selected>On</option>
+                    </select>
+                </div>
+                
+                <div class="setting-item" id="outerLightRadiusGroup">
+                    <label>Light Radius: <span class="value-display" id="outerLightRadiusValue">20</span></label>
+                    <input type="range" id="outerLightRadius" min="5" max="50" value="20">
+                </div>
+            </div>
+            
+            <div class="setting-group">
+                <h3>Inner Shape (Ball)</h3>
+                
+                <div class="setting-item">
+                    <label>Corners: <span class="value-display" id="innerCornersValue">0</span></label>
+                    <input type="range" id="innerCorners" min="3" max="100" value="3">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="innerCircle" checked>
+                        <label for="innerCircle">No corners (Circle)</label>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <label>Light</label>
+                    <select id="innerLight">
+                        <option value="off">Off</option>
+                        <option value="on" selected>On</option>
+                    </select>
+                </div>
+                
+                <div class="setting-item" id="innerLightRadiusGroup">
+                    <label>Light Radius: <span class="value-display" id="innerLightRadiusValue">15</span></label>
+                    <input type="range" id="innerLightRadius" min="5" max="50" value="15">
+                </div>
+                
+                <div class="setting-item">
+                    <label>Random Color</label>
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="randomColor" value="off" checked>
+                            Off
+                        </label>
+                        <label>
+                            <input type="radio" name="randomColor" value="onStart">
+                            On Start
+                        </label>
+                        <label>
+                            <input type="radio" name="randomColor" value="onBounce">
+                            On Bounce
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="setting-group">
+                <h3>Physics</h3>
+                
+                <div class="setting-item">
+                    <label>Gravity: <span class="value-display" id="gravityValue">0.3</span></label>
+                    <input type="range" id="gravity" min="0" max="1" step="0.05" value="0.3">
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <h3>Bounce Reaction</h3>
+
+                <div class="setting-item">
+                    <label>Reacting Figure</label>
+                    <select id="bounceTarget">
+                        <option value="inner" selected>Inner</option>
+                        <option value="outer">Outer</option>
+                        <option value="both">Both</option>
+                    </select>
+                </div>
+
+                <div class="setting-item">
+                    <label>Action</label>
+                    <select id="bounceAction">
+                        <option value="none" selected>None</option>
+                        <option value="color">Change Color</option>
+                        <option value="sizePlus">Increase Size</option>
+                        <option value="sizeMinus">Decrease Size</option>
+                        <option value="sidesPlus">Increase Sides</option>
+                        <option value="sidesMinus">Decrease Sides</option>
+                    </select>
+                </div>
+
+                <div class="setting-item" id="bounceStepGroup">
+                    <label>Step: <span class="value-display" id="bounceStepValue">5</span></label>
+                    <input type="range" id="bounceStep" min="1" max="50" value="5">
+                </div>
+
+                <div class="setting-item" id="bounceColorGroup" style="display:none;">
+                    <label>Color Mode</label>
+                    <select id="bounceColorMode">
+                        <option value="random" selected>Random</option>
+                        <option value="shift">Shift Hue</option>
+                    </select>
+                    <div class="checkbox-group" style="margin-top:8px;">
+                        <label>Hue Shift: <span class="value-display" id="bounceHueShiftValue">30</span></label>
+                        <input type="range" id="bounceHueShift" min="1" max="180" value="30">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="preview-panel">
+            <canvas id="canvas" width="700" height="700"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const welcomeScreen = document.getElementById('welcomeScreen');
+        const simulatorScreen = document.getElementById('simulatorScreen');
+        const getStartedBtn = document.getElementById('getStartedBtn');
+        
+        getStartedBtn.addEventListener('click', () => {
+            welcomeScreen.classList.add('hidden');
+            setTimeout(() => {
+                simulatorScreen.classList.add('active');
+                initSimulation();
+            }, 500);
+        });
+        
+        // Settings
+        const outerCorners = document.getElementById('outerCorners');
+        const outerCornersValue = document.getElementById('outerCornersValue');
+        const outerCircle = document.getElementById('outerCircle');
+        const lineWidth = document.getElementById('lineWidth');
+        const lineWidthValue = document.getElementById('lineWidthValue');
+        const outerLight = document.getElementById('outerLight');
+        const outerLightRadius = document.getElementById('outerLightRadius');
+        const outerLightRadiusValue = document.getElementById('outerLightRadiusValue');
+        const outerLightRadiusGroup = document.getElementById('outerLightRadiusGroup');
+        
+        const innerCorners = document.getElementById('innerCorners');
+        const innerCornersValue = document.getElementById('innerCornersValue');
+        const innerCircle = document.getElementById('innerCircle');
+        const innerLight = document.getElementById('innerLight');
+        const innerLightRadius = document.getElementById('innerLightRadius');
+        const innerLightRadiusValue = document.getElementById('innerLightRadiusValue');
+        const innerLightRadiusGroup = document.getElementById('innerLightRadiusGroup');
+        const randomColorInputs = document.querySelectorAll('input[name="randomColor"]');
+        
+        const gravityInput = document.getElementById('gravity');
+        const gravityValue = document.getElementById('gravityValue');
+
+        // Bounce controls
+        const bounceTarget = document.getElementById('bounceTarget');
+        const bounceAction = document.getElementById('bounceAction');
+        const bounceStep = document.getElementById('bounceStep');
+        const bounceStepValue = document.getElementById('bounceStepValue');
+        const bounceStepGroup = document.getElementById('bounceStepGroup');
+        const bounceColorGroup = document.getElementById('bounceColorGroup');
+        const bounceColorMode = document.getElementById('bounceColorMode');
+        const bounceHueShift = document.getElementById('bounceHueShift');
+        const bounceHueShiftValue = document.getElementById('bounceHueShiftValue');
+        
+        let settings = {
+            outer: {
+                corners: 4,
+                isCircle: false,
+                lineWidth: 8,
+                light: true,
+                lightRadius: 20,
+                color: '#ffffff'
+            },
+            inner: {
+                corners: 3,
+                isCircle: true,
+                light: true,
+                lightRadius: 15,
+                randomColor: 'off'
+            },
+            physics: {
+                gravity: 0.3
+            },
+            bounce: {
+                target: 'inner',
+                action: 'none',
+                step: 5,
+                colorMode: 'random',
+                hueShift: 30
+            }
+        };
+        
+        function teleportBallToCenter() {
+            ball.x = container.x;
+            ball.y = container.y;
+            ball.vx = 0;
+            ball.vy = 0;
+        }
+
+        outerCorners.addEventListener('input', (e) => {
+            settings.outer.corners = parseInt(e.target.value);
+            outerCornersValue.textContent = e.target.value;
+            teleportBallToCenter();
+        });
+        
+        outerCircle.addEventListener('change', (e) => {
+            settings.outer.isCircle = e.target.checked;
+            outerCorners.disabled = e.target.checked;
+            teleportBallToCenter();
+        });
+        
+        lineWidth.addEventListener('input', (e) => {
+            settings.outer.lineWidth = parseInt(e.target.value);
+            lineWidthValue.textContent = e.target.value;
+        });
+        
+        outerLight.addEventListener('change', (e) => {
+            settings.outer.light = e.target.value === 'on';
+            outerLightRadiusGroup.style.display = settings.outer.light ? 'block' : 'none';
+        });
+        
+        outerLightRadius.addEventListener('input', (e) => {
+            settings.outer.lightRadius = parseInt(e.target.value);
+            outerLightRadiusValue.textContent = e.target.value;
+        });
+        
+        innerCorners.addEventListener('input', (e) => {
+            settings.inner.corners = parseInt(e.target.value);
+            innerCornersValue.textContent = e.target.value;
+            teleportBallToCenter();
+        });
+        
+        innerCircle.addEventListener('change', (e) => {
+            settings.inner.isCircle = e.target.checked;
+            innerCorners.disabled = e.target.checked;
+            innerCornersValue.textContent = e.target.checked ? '0' : innerCorners.value;
+            teleportBallToCenter();
+        });
+        
+        innerLight.addEventListener('change', (e) => {
+            settings.inner.light = e.target.value === 'on';
+            innerLightRadiusGroup.style.display = settings.inner.light ? 'block' : 'none';
+        });
+        
+        innerLightRadius.addEventListener('input', (e) => {
+            settings.inner.lightRadius = parseInt(e.target.value);
+            innerLightRadiusValue.textContent = e.target.value;
+        });
+        
+        randomColorInputs.forEach(input => {
+            input.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    settings.inner.randomColor = e.target.value;
+                    if (e.target.value === 'onStart') {
+                        ball.color = getRandomColor();
+                    }
+                }
+            });
+        });
+        
+        gravityInput.addEventListener('input', (e) => {
+            settings.physics.gravity = parseFloat(e.target.value);
+            gravityValue.textContent = e.target.value;
+        });
+
+        // Bounce UI handlers
+        bounceTarget.addEventListener('change', (e) => {
+            settings.bounce.target = e.target.value;
+        });
+
+        function updateBounceControlsVisibility() {
+            const action = bounceAction.value;
+            bounceStepGroup.style.display = (action === 'sizePlus' || action === 'sizeMinus' || action === 'sidesPlus' || action === 'sidesMinus') ? 'block' : 'none';
+            bounceColorGroup.style.display = (action === 'color') ? 'block' : 'none';
+        }
+
+        bounceAction.addEventListener('change', (e) => {
+            settings.bounce.action = e.target.value;
+            updateBounceControlsVisibility();
+        });
+
+        bounceStep.addEventListener('input', (e) => {
+            settings.bounce.step = parseInt(e.target.value);
+            bounceStepValue.textContent = e.target.value;
+        });
+
+        bounceColorMode.addEventListener('change', (e) => {
+            settings.bounce.colorMode = e.target.value;
+        });
+
+        bounceHueShift.addEventListener('input', (e) => {
+            settings.bounce.hueShift = parseInt(e.target.value);
+            bounceHueShiftValue.textContent = e.target.value;
+        });
+        
+        function getRandomColor() {
+            const hue = Math.random() * 360;
+            return `hsl(${hue}, 70%, 60%)`;
+        }
+
+        function shiftHue(hslString, deltaHue) {
+            // expects format hsl(h, s%, l%)
+            const match = /hsl\((\d+(?:\.\d+)?),\s*(\d+)%\s*,\s*(\d+)%\)/i.exec(hslString);
+            if (!match) {
+                return getRandomColor();
+            }
+            let h = parseFloat(match[1]);
+            const s = parseInt(match[2]);
+            const l = parseInt(match[3]);
+            h = (h + deltaHue) % 360;
+            if (h < 0) h += 360;
+            return `hsl(${h}, ${s}%, ${l}%)`;
+        }
+        
+        // Simulation
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let ball = {
+            x: canvas.width / 2,
+            y: canvas.height / 2 - 100,
+            radius: 15,
+            vx: 3,
+            vy: 0,
+            color: '#ffffff',
+            rotation: 0
+        };
+        
+        let container = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            radius: 250,
+            rotation: 0
+        };
+        
+        function initSimulation() {
+            if (settings.inner.randomColor === 'onStart') {
+                ball.color = getRandomColor();
+            }
+            animate();
+        }
+        
+        function getPolygonPoints(x, y, radius, sides, rotation) {
+            const points = [];
+            for (let i = 0; i < sides; i++) {
+                const angle = (i / sides) * Math.PI * 2 - Math.PI / 2 + rotation;
+                points.push({
+                    x: x + Math.cos(angle) * radius,
+                    y: y + Math.sin(angle) * radius
+                });
+            }
+            return points;
+        }
+        
+        function drawPolygon(x, y, radius, sides, rotation, color, glow) {
+            const points = getPolygonPoints(x, y, radius, sides, rotation);
+            
+            ctx.save();
+            
+            if (glow) {
+                ctx.shadowBlur = settings.outer.lightRadius;
+                ctx.shadowColor = color;
+            }
+            
+            // Draw each line segment separately
+            ctx.strokeStyle = color;
+            ctx.lineWidth = settings.outer.lineWidth;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            for (let i = 0; i < points.length; i++) {
+                const p1 = points[i];
+                const p2 = points[(i + 1) % points.length];
+                
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.stroke();
+            }
+            
+            ctx.restore();
+            
+            return points;
+        }
+        
+        function drawCircle(x, y, radius, color, glow, glowRadius) {
+            ctx.save();
+            
+            if (glow) {
+                ctx.shadowBlur = glowRadius;
+                ctx.shadowColor = color;
+            }
+            
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = settings.outer.lineWidth;
+            ctx.stroke();
+            
+            ctx.restore();
+        }
+        
+        function drawBall() {
+            ctx.save();
+            
+            if (settings.inner.light) {
+                ctx.shadowBlur = settings.inner.lightRadius;
+                ctx.shadowColor = ball.color;
+            }
+            
+            if (settings.inner.isCircle) {
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+                ctx.fillStyle = ball.color;
+                ctx.fill();
+            } else {
+                ctx.translate(ball.x, ball.y);
+                ctx.rotate(ball.rotation);
+                ctx.beginPath();
+                const sides = settings.inner.corners;
+                for (let i = 0; i < sides; i++) {
+                    const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
+                    const px = Math.cos(angle) * ball.radius;
+                    const py = Math.sin(angle) * ball.radius;
+                    if (i === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.fillStyle = ball.color;
+                ctx.fill();
+            }
+            
+            ctx.restore();
+        }
+        
+        function lineIntersectsCircle(p1, p2, circle, circleRadius) {
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const fx = p1.x - circle.x;
+            const fy = p1.y - circle.y;
+            
+            const a = dx * dx + dy * dy;
+            const b = 2 * (fx * dx + fy * dy);
+            const c = (fx * fx + fy * fy) - circleRadius * circleRadius;
+            
+            let discriminant = b * b - 4 * a * c;
+            
+            if (discriminant >= 0) {
+                discriminant = Math.sqrt(discriminant);
+                const t1 = (-b - discriminant) / (2 * a);
+                const t2 = (-b + discriminant) / (2 * a);
+                
+                if ((t1 >= 0 && t1 <= 1) || (t2 >= 0 && t2 <= 1)) {
+                    const normal = {
+                        x: -(p2.y - p1.y),
+                        y: p2.x - p1.x
+                    };
+                    const len = Math.sqrt(normal.x * normal.x + normal.y * normal.y);
+                    normal.x /= len;
+                    normal.y /= len;
+                    
+                    const centerToLine = {
+                        x: circle.x - p1.x,
+                        y: circle.y - p1.y
+                    };
+                    
+                    if (centerToLine.x * normal.x + centerToLine.y * normal.y < 0) {
+                        normal.x = -normal.x;
+                        normal.y = -normal.y;
+                    }
+                    
+                    return normal;
+                }
+            }
+            
+            return null;
+        }
+        
+        function applyBounceEffects() {
+            const targets = settings.bounce.target === 'both' ? ['inner', 'outer'] : [settings.bounce.target];
+            const action = settings.bounce.action;
+            const step = settings.bounce.step;
+
+            for (const t of targets) {
+                if (action === 'color') {
+                    if (t === 'inner') {
+                        ball.color = settings.bounce.colorMode === 'random' ? getRandomColor() : shiftHue(ball.color, settings.bounce.hueShift);
+                    } else if (t === 'outer') {
+                        settings.outer.color = settings.bounce.colorMode === 'random' ? getRandomColor() : shiftHue(settings.outer.color, settings.bounce.hueShift);
+                    }
+                } else if (action === 'sizePlus' || action === 'sizeMinus') {
+                    const delta = (action === 'sizePlus' ? step : -step);
+                    if (t === 'inner') {
+                        ball.radius = Math.max(2, Math.min(300, ball.radius + delta));
+                    } else if (t === 'outer') {
+                        container.radius = Math.max(30, Math.min(350, container.radius + delta));
+                        // Keep ball inside after container shrink
+                        const dx = ball.x - container.x;
+                        const dy = ball.y - container.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                        const maxDist = Math.max(0, container.radius - ball.radius - 2);
+                        if (dist > maxDist) {
+                            const scale = maxDist / dist;
+                            ball.x = container.x + dx * scale;
+                            ball.y = container.y + dy * scale;
+                            ball.vx = 0; ball.vy = 0;
+                        }
+                    }
+                } else if (action === 'sidesPlus' || action === 'sidesMinus') {
+                    const deltaSides = (action === 'sidesPlus' ? step : -step);
+                    if (t === 'inner' && !settings.inner.isCircle) {
+                        settings.inner.corners = Math.max(3, Math.min(100, settings.inner.corners + deltaSides));
+                        innerCorners.value = settings.inner.corners;
+                        innerCornersValue.textContent = String(settings.inner.corners);
+                    }
+                    if (t === 'outer' && !settings.outer.isCircle) {
+                        settings.outer.corners = Math.max(3, Math.min(100, settings.outer.corners + deltaSides));
+                        outerCorners.value = settings.outer.corners;
+                        outerCornersValue.textContent = String(settings.outer.corners);
+                    }
+                }
+            }
+        }
+
+        function checkCollisionWithLines(points) {
+            for (let i = 0; i < points.length; i++) {
+                const p1 = points[i];
+                const p2 = points[(i + 1) % points.length];
+                
+                const normal = lineIntersectsCircle(p1, p2, ball, ball.radius);
+                
+                if (normal) {
+                    // Reflect velocity
+                    const dot = ball.vx * normal.x + ball.vy * normal.y;
+                    ball.vx -= 2 * dot * normal.x;
+                    ball.vy -= 2 * dot * normal.y;
+                    
+                    ball.vx *= 0.98;
+                    ball.vy *= 0.98;
+                    
+                    // Calculate distance from line
+                    const dx = p2.x - p1.x;
+                    const dy = p2.y - p1.y;
+                    const lineLen = Math.sqrt(dx * dx + dy * dy);
+                    const lineDirX = dx / lineLen;
+                    const lineDirY = dy / lineLen;
+                    
+                    const toBallX = ball.x - p1.x;
+                    const toBallY = ball.y - p1.y;
+                    
+                    const projection = toBallX * lineDirX + toBallY * lineDirY;
+                    const closestX = p1.x + lineDirX * projection;
+                    const closestY = p1.y + lineDirY * projection;
+                    
+                    const distX = ball.x - closestX;
+                    const distY = ball.y - closestY;
+                    const dist = Math.sqrt(distX * distX + distY * distY);
+                    
+                    // Push ball away from line if too close
+                    if (dist < ball.radius) {
+                        const pushDist = ball.radius - dist + 2; // +2 for safety margin
+                        ball.x += (distX / dist) * pushDist;
+                        ball.y += (distY / dist) * pushDist;
+                    }
+                    
+                    // Color on bounce (legacy option)
+                    if (settings.inner.randomColor === 'onBounce') {
+                        ball.color = getRandomColor();
+                    }
+
+                    // Apply configured bounce effects
+                    applyBounceEffects();
+                    
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        function checkCircleCollision() {
+            const dx = ball.x - container.x;
+            const dy = ball.y - container.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance + ball.radius >= container.radius) {
+                const angle = Math.atan2(dy, dx);
+                const overlap = distance + ball.radius - container.radius + 2; // +2 for safety margin
+                
+                ball.x -= Math.cos(angle) * overlap;
+                ball.y -= Math.sin(angle) * overlap;
+                
+                const normal = { x: dx / distance, y: dy / distance };
+                const dot = ball.vx * normal.x + ball.vy * normal.y;
+                ball.vx -= 2 * dot * normal.x;
+                ball.vy -= 2 * dot * normal.y;
+                
+                ball.vx *= 0.98;
+                ball.vy *= 0.98;
+                
+                if (settings.inner.randomColor === 'onBounce') {
+                    ball.color = getRandomColor();
+                }
+
+                // Apply configured bounce effects
+                applyBounceEffects();
+            }
+        }
+        
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw outer shape and get collision points
+            let collisionPoints = null;
+            if (settings.outer.isCircle) {
+                drawCircle(container.x, container.y, container.radius, settings.outer.color, settings.outer.light, settings.outer.lightRadius);
+            } else {
+                collisionPoints = drawPolygon(container.x, container.y, container.radius, settings.outer.corners, container.rotation, settings.outer.color, settings.outer.light);
+            }
+            
+            // Apply gravity
+            ball.vy += settings.physics.gravity;
+            
+            // Update ball position
+            ball.x += ball.vx;
+            ball.y += ball.vy;
+            ball.rotation += 0.05;
+            
+            // Check collisions
+            if (settings.outer.isCircle) {
+                checkCircleCollision();
+            } else if (collisionPoints) {
+                checkCollisionWithLines(collisionPoints);
+            }
+            
+            drawBall();
+            
+            container.rotation += 0.01;
+            
+            requestAnimationFrame(animate);
+        }
+    </script>
+</body>
+</html>
