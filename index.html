@@ -241,6 +241,112 @@
             margin-left: 10px;
             color: #c946a8;
         }
+
+        .fullscreen-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            color: #2a2a2a;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-family: 'Finger Paint', cursive;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3), 0 0 20px rgba(255, 255, 255, 0.5);
+            transition: transform 0.2s, box-shadow 0.2s;
+            z-index: 1000;
+        }
+
+        .fullscreen-btn:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4), 0 0 30px rgba(255, 255, 255, 0.8);
+        }
+
+        .fullscreen-mode {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #2a2a2a, #c946a8);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .fullscreen-mode.active {
+            display: flex;
+        }
+
+        .fullscreen-canvas {
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            max-width: 90vw;
+            max-height: 80vh;
+        }
+
+        .fullscreen-controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            padding: 15px 20px;
+            border-radius: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .control-btn {
+            background: white;
+            color: #2a2a2a;
+            border: none;
+            padding: 10px 20px;
+            font-size: 0.9rem;
+            font-family: 'Finger Paint', cursive;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .control-btn:hover {
+            transform: translateY(-1px) scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .control-btn.paused {
+            background: #c946a8;
+            color: white;
+        }
+
+        .speed-control {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .speed-control label {
+            color: white;
+            font-size: 0.8rem;
+        }
+
+        .speed-control input[type="range"] {
+            width: 100px;
+        }
+
+        .speed-value {
+            color: #c946a8;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -409,12 +515,37 @@
         <div class="preview-panel">
             <canvas id="canvas" width="700" height="700"></canvas>
         </div>
+        
+        <button class="fullscreen-btn" id="fullscreenBtn">Fullscreen</button>
+    </div>
+
+    <div class="fullscreen-mode" id="fullscreenMode">
+        <canvas id="fullscreenCanvas" class="fullscreen-canvas"></canvas>
+        
+        <div class="fullscreen-controls">
+            <button class="control-btn" id="pauseBtn">Pause</button>
+            <button class="control-btn" id="restartBtn">Restart</button>
+            <div class="speed-control">
+                <label>Speed</label>
+                <input type="range" id="speedSlider" min="-3" max="3" step="0.1" value="1">
+                <span class="speed-value" id="speedValue">1.0x</span>
+            </div>
+        </div>
     </div>
 
     <script>
         const welcomeScreen = document.getElementById('welcomeScreen');
         const simulatorScreen = document.getElementById('simulatorScreen');
         const getStartedBtn = document.getElementById('getStartedBtn');
+        
+        // Fullscreen elements
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const fullscreenMode = document.getElementById('fullscreenMode');
+        const fullscreenCanvas = document.getElementById('fullscreenCanvas');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const speedSlider = document.getElementById('speedSlider');
+        const speedValue = document.getElementById('speedValue');
         
         getStartedBtn.addEventListener('click', () => {
             welcomeScreen.classList.add('hidden');
@@ -610,6 +741,57 @@
         bounceColorModeOuter.addEventListener('change', (e) => { settings.bounce.outer.colorMode = e.target.value; });
         bounceHueShiftInner.addEventListener('input', (e) => { settings.bounce.inner.hueShift = parseInt(e.target.value); bounceHueShiftValueInner.textContent = e.target.value; });
         bounceHueShiftOuter.addEventListener('input', (e) => { settings.bounce.outer.hueShift = parseInt(e.target.value); bounceHueShiftValueOuter.textContent = e.target.value; });
+
+        // Fullscreen event handlers
+        fullscreenBtn.addEventListener('click', enterFullscreen);
+        
+        pauseBtn.addEventListener('click', () => {
+            isPaused = !isPaused;
+            if (isPaused) {
+                pauseBtn.textContent = 'Resume';
+                pauseBtn.classList.add('paused');
+            } else {
+                pauseBtn.textContent = 'Pause';
+                pauseBtn.classList.remove('paused');
+                startFullscreenAnimation();
+            }
+        });
+        
+        restartBtn.addEventListener('click', () => {
+            stopFullscreenLoop();
+            ball.x = fullscreenCanvas.width / 2;
+            ball.y = fullscreenCanvas.height / 2 - 100;
+            ball.radius = 15;
+            ball.rotation = 0;
+            container.x = fullscreenCanvas.width / 2;
+            container.y = fullscreenCanvas.height / 2;
+            container.radius = 250;
+            container.rotation = 0;
+            
+            if (settings.inner.randomColor === 'onStart') {
+                ball.color = getRandomColor();
+            } else {
+                ball.color = '#ffffff';
+            }
+            
+            setInitialVelocityByAngle();
+            isPaused = false;
+            pauseBtn.textContent = 'Pause';
+            pauseBtn.classList.remove('paused');
+            startFullscreenAnimation();
+        });
+        
+        speedSlider.addEventListener('input', (e) => {
+            playbackSpeed = parseFloat(e.target.value);
+            speedValue.textContent = playbackSpeed.toFixed(1) + 'x';
+        });
+        
+        // ESC to exit fullscreen
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && fullscreenMode.classList.contains('active')) {
+                exitFullscreen();
+            }
+        });
         
         function getRandomColor() {
             const hue = Math.random() * 360;
@@ -652,11 +834,22 @@
         };
         
         let rafId = null;
+        let fullscreenRafId = null;
+        let isPaused = false;
+        let playbackSpeed = 1.0;
+        let fullscreenCtx = null;
 
         function stopLoop() {
             if (rafId !== null) {
                 cancelAnimationFrame(rafId);
                 rafId = null;
+            }
+        }
+
+        function stopFullscreenLoop() {
+            if (fullscreenRafId !== null) {
+                cancelAnimationFrame(fullscreenRafId);
+                fullscreenRafId = null;
             }
         }
 
@@ -720,26 +913,70 @@
             updateBounceControlsVisibility();
         }
 
-        function initSimulation() {
+        function initFullscreenCanvas() {
+            const maxSize = Math.min(window.innerWidth * 0.9, window.innerHeight * 0.8);
+            fullscreenCanvas.width = maxSize;
+            fullscreenCanvas.height = maxSize;
+            fullscreenCtx = fullscreenCanvas.getContext('2d');
+        }
+
+        function enterFullscreen() {
             stopLoop();
-            // Reset positions and rotation
-            ball.x = canvas.width / 2;
-            ball.y = canvas.height / 2 - 100;
-            ball.radius = 15;
-            ball.rotation = 0;
-            container.x = canvas.width / 2;
-            container.y = canvas.height / 2;
-            container.radius = 250;
-            container.rotation = 0;
+            initFullscreenCanvas();
+            fullscreenMode.classList.add('active');
+            isPaused = false;
+            pauseBtn.textContent = 'Pause';
+            pauseBtn.classList.remove('paused');
+            startFullscreenAnimation();
+        }
 
-            if (settings.inner.randomColor === 'onStart') {
-                ball.color = getRandomColor();
-            } else {
-                ball.color = '#ffffff';
+        function exitFullscreen() {
+            stopFullscreenLoop();
+            fullscreenMode.classList.remove('active');
+            initSimulation();
+        }
+
+        function startFullscreenAnimation() {
+            if (isPaused) return;
+            
+            function animateFullscreen() {
+                if (!isPaused) {
+                    updateSimulation(fullscreenCtx, fullscreenCanvas);
+                    fullscreenRafId = requestAnimationFrame(animateFullscreen);
+                }
             }
+            animateFullscreen();
+        }
 
-            setInitialVelocityByAngle();
-            rafId = requestAnimationFrame(animate);
+        function updateSimulation(ctx, canvas) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw outer shape and get collision points
+            let collisionPoints = null;
+            if (settings.outer.isCircle) {
+                drawCircleFullscreen(container.x, container.y, container.radius, settings.outer.color, settings.outer.light, settings.outer.lightRadius);
+            } else {
+                collisionPoints = drawPolygonFullscreen(container.x, container.y, container.radius, settings.outer.corners, container.rotation, settings.outer.color, settings.outer.light);
+            }
+            
+            // Apply gravity
+            ball.vy += settings.physics.gravity * playbackSpeed;
+            
+            // Update ball position
+            ball.x += ball.vx * playbackSpeed;
+            ball.y += ball.vy * playbackSpeed;
+            ball.rotation += 0.05 * playbackSpeed;
+            
+            // Check collisions
+            if (settings.outer.isCircle) {
+                checkCircleCollision();
+            } else if (collisionPoints) {
+                checkCollisionWithLines(collisionPoints);
+            }
+            
+            drawBallFullscreen();
+            
+            container.rotation += 0.01 * playbackSpeed;
         }
         
         function getPolygonPoints(x, y, radius, sides, rotation) {
@@ -784,6 +1021,36 @@
             
             return points;
         }
+
+        function drawPolygonFullscreen(x, y, radius, sides, rotation, color, glow) {
+            const points = getPolygonPoints(x, y, radius, sides, rotation);
+            
+            fullscreenCtx.save();
+            
+            if (glow) {
+                fullscreenCtx.shadowBlur = settings.outer.lightRadius;
+                fullscreenCtx.shadowColor = color;
+            }
+            
+            fullscreenCtx.strokeStyle = color;
+            fullscreenCtx.lineWidth = settings.outer.lineWidth;
+            fullscreenCtx.lineCap = 'round';
+            fullscreenCtx.lineJoin = 'round';
+            
+            for (let i = 0; i < points.length; i++) {
+                const p1 = points[i];
+                const p2 = points[(i + 1) % points.length];
+                
+                fullscreenCtx.beginPath();
+                fullscreenCtx.moveTo(p1.x, p1.y);
+                fullscreenCtx.lineTo(p2.x, p2.y);
+                fullscreenCtx.stroke();
+            }
+            
+            fullscreenCtx.restore();
+            
+            return points;
+        }
         
         function drawCircle(x, y, radius, color, glow, glowRadius) {
             ctx.save();
@@ -800,6 +1067,23 @@
             ctx.stroke();
             
             ctx.restore();
+        }
+
+        function drawCircleFullscreen(x, y, radius, color, glow, glowRadius) {
+            fullscreenCtx.save();
+            
+            if (glow) {
+                fullscreenCtx.shadowBlur = glowRadius;
+                fullscreenCtx.shadowColor = color;
+            }
+            
+            fullscreenCtx.beginPath();
+            fullscreenCtx.arc(x, y, radius, 0, Math.PI * 2);
+            fullscreenCtx.strokeStyle = color;
+            fullscreenCtx.lineWidth = settings.outer.lineWidth;
+            fullscreenCtx.stroke();
+            
+            fullscreenCtx.restore();
         }
         
         function drawBall() {
@@ -833,6 +1117,39 @@
             }
             
             ctx.restore();
+        }
+
+        function drawBallFullscreen() {
+            fullscreenCtx.save();
+            
+            if (settings.inner.light) {
+                fullscreenCtx.shadowBlur = settings.inner.lightRadius;
+                fullscreenCtx.shadowColor = ball.color;
+            }
+            
+            if (settings.inner.isCircle) {
+                fullscreenCtx.beginPath();
+                fullscreenCtx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+                fullscreenCtx.fillStyle = ball.color;
+                fullscreenCtx.fill();
+            } else {
+                fullscreenCtx.translate(ball.x, ball.y);
+                fullscreenCtx.rotate(ball.rotation);
+                fullscreenCtx.beginPath();
+                const sides = settings.inner.corners;
+                for (let i = 0; i < sides; i++) {
+                    const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
+                    const px = Math.cos(angle) * ball.radius;
+                    const py = Math.sin(angle) * ball.radius;
+                    if (i === 0) fullscreenCtx.moveTo(px, py);
+                    else fullscreenCtx.lineTo(px, py);
+                }
+                fullscreenCtx.closePath();
+                fullscreenCtx.fillStyle = ball.color;
+                fullscreenCtx.fill();
+            }
+            
+            fullscreenCtx.restore();
         }
         
         function lineIntersectsCircle(p1, p2, circle, circleRadius) {
