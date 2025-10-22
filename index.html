@@ -513,7 +513,7 @@
 
         function softRestart() {
             // keep current settings, just reset positions and velocity and start over
-            cancelAnimationFrame(rafId);
+            stopLoop();
             ball.x = container.x; ball.y = container.y; ball.rotation = 0;
             setInitialVelocityByAngle();
             rafId = requestAnimationFrame(animate);
@@ -653,6 +653,13 @@
         
         let rafId = null;
 
+        function stopLoop() {
+            if (rafId !== null) {
+                cancelAnimationFrame(rafId);
+                rafId = null;
+            }
+        }
+
         function setInitialVelocityByAngle() {
             const angleRad = (settings.launch.angleDeg * Math.PI) / 180;
             const speed = settings.launch.initialSpeed;
@@ -714,7 +721,7 @@
         }
 
         function initSimulation() {
-            cancelAnimationFrame(rafId);
+            stopLoop();
             // Reset positions and rotation
             ball.x = canvas.width / 2;
             ball.y = canvas.height / 2 - 100;
@@ -1030,7 +1037,7 @@
             
             container.rotation += 0.01;
             
-            requestAnimationFrame(animate);
+            rafId = requestAnimationFrame(animate);
         }
     </script>
 </body>
