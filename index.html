@@ -553,6 +553,7 @@
             setTimeout(() => {
                 simulatorScreen.classList.add('active');
                 initSimulation();
+                drawPreview();
             }, 500);
         });
         
@@ -643,6 +644,13 @@
             initSimulation();
         }
 
+        function teleportBallToCenter() {
+            ball.x = container.x;
+            ball.y = container.y;
+            ball.vx = 0;
+            ball.vy = 0;
+        }
+
         function softRestart() {
             // keep current settings, just reset positions and velocity and start over
             stopLoop();
@@ -654,51 +662,56 @@
         outerCorners.addEventListener('input', (e) => {
             settings.outer.corners = parseInt(e.target.value);
             outerCornersValue.textContent = e.target.value;
-            teleportBallToCenter(); softRestart();
+            drawPreview();
         });
         
         outerCircle.addEventListener('change', (e) => {
             settings.outer.isCircle = e.target.checked;
             outerCorners.disabled = e.target.checked;
-            teleportBallToCenter(); softRestart();
+            drawPreview();
         });
         
         lineWidth.addEventListener('input', (e) => {
             settings.outer.lineWidth = parseInt(e.target.value);
             lineWidthValue.textContent = e.target.value;
+            drawPreview();
         });
         
         outerLight.addEventListener('change', (e) => {
             settings.outer.light = e.target.value === 'on';
             outerLightRadiusGroup.style.display = settings.outer.light ? 'block' : 'none';
+            drawPreview();
         });
         
         outerLightRadius.addEventListener('input', (e) => {
             settings.outer.lightRadius = parseInt(e.target.value);
             outerLightRadiusValue.textContent = e.target.value;
+            drawPreview();
         });
         
         innerCorners.addEventListener('input', (e) => {
             settings.inner.corners = parseInt(e.target.value);
             innerCornersValue.textContent = e.target.value;
-            teleportBallToCenter(); softRestart();
+            drawPreview();
         });
         
         innerCircle.addEventListener('change', (e) => {
             settings.inner.isCircle = e.target.checked;
             innerCorners.disabled = e.target.checked;
             innerCornersValue.textContent = e.target.checked ? '0' : innerCorners.value;
-            teleportBallToCenter(); softRestart();
+            drawPreview();
         });
         
         innerLight.addEventListener('change', (e) => {
             settings.inner.light = e.target.value === 'on';
             innerLightRadiusGroup.style.display = settings.inner.light ? 'block' : 'none';
+            drawPreview();
         });
         
         innerLightRadius.addEventListener('input', (e) => {
             settings.inner.lightRadius = parseInt(e.target.value);
             innerLightRadiusValue.textContent = e.target.value;
+            drawPreview();
         });
         
         randomColorInputs.forEach(input => {
@@ -708,6 +721,7 @@
                     if (e.target.value === 'onStart') {
                         ball.color = getRandomColor();
                     }
+                    drawPreview();
                 }
             });
         });
@@ -794,6 +808,15 @@
             }
         });
         
+        function updateBounceControlsVisibility() {
+            const actionI = bounceActionInner.value;
+            const actionO = bounceActionOuter.value;
+            bounceStepGroupInner.style.display = (actionI === 'sizePlus' || actionI === 'sizeMinus' || actionI === 'sidesPlus' || actionI === 'sidesMinus') ? 'block' : 'none';
+            bounceColorGroupInner.style.display = (actionI === 'color') ? 'block' : 'none';
+            bounceStepGroupOuter.style.display = (actionO === 'sizePlus' || actionO === 'sizeMinus' || actionO === 'sidesPlus' || actionO === 'sidesMinus') ? 'block' : 'none';
+            bounceColorGroupOuter.style.display = (actionO === 'color') ? 'block' : 'none';
+        }
+
         function getRandomColor() {
             const hue = Math.random() * 360;
             return `hsl(${hue}, 70%, 60%)`;
@@ -927,6 +950,71 @@
             ball.y = fullscreenCanvas.height / 2 - 100;
         }
 
+        function drawPreview() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw outer shape
+            if (settings.outer.isCircle) {
+                drawCircle(container.x, container.y, container.radius, settings.outer.color, settings.outer.light, settings.outer.lightRadius);
+            } else {
+                drawPolygon(container.x, container.y, container.radius, settings.outer.corners, container.rotation, settings.outer.color, settings.outer.light);
+            }
+            
+            // Draw inner shape (static preview)
+            ctx.save();
+            
+            if (settings.inner.light) {
+                ctx.shadowBlur = settings.inner.lightRadius;
+                ctx.shadowColor = ball.color;
+            }
+            
+            if (settings.inner.isCircle) {
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+                ctx.fillStyle = ball.color;
+                ctx.fill();
+            } else {
+                ctx.translate(ball.x, ball.y);
+                ctx.rotate(ball.rotation);
+                ctx.beginPath();
+                const sides = settings.inner.corners;
+                for (let i = 0; i < sides; i++) {
+                    const angle = (i / sides) * Math.PI * 2 - Math.PI / 2;
+                    const px = Math.cos(angle) * ball.radius;
+                    const py = Math.sin(angle) * ball.radius;
+                    if (i === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.fillStyle = ball.color;
+                ctx.fill();
+            }
+            
+            ctx.restore();
+        }
+
+        function initSimulation() {
+            stopLoop();
+            // Reset positions and rotation
+            ball.x = canvas.width / 2;
+            ball.y = canvas.height / 2 - 100;
+            ball.radius = 15;
+            ball.rotation = 0;
+            container.x = canvas.width / 2;
+            container.y = canvas.height / 2;
+            container.radius = 250;
+            container.rotation = 0;
+
+            if (settings.inner.randomColor === 'onStart') {
+                ball.color = getRandomColor();
+            } else {
+                ball.color = '#ffffff';
+            }
+
+            setInitialVelocityByAngle();
+            rafId = requestAnimationFrame(animate);
+        }
+
         function enterFullscreen() {
             stopLoop();
             initFullscreenCanvas();
@@ -935,6 +1023,12 @@
             pauseBtn.textContent = 'Pause';
             pauseBtn.classList.remove('paused');
             startFullscreenAnimation();
+        }
+
+        function exitFullscreen() {
+            stopFullscreenLoop();
+            fullscreenMode.classList.remove('active');
+            initSimulation();
         }
 
         function exitFullscreen() {
@@ -992,6 +1086,51 @@
             container.rotation += 0.01 * playbackSpeed;
         }
         
+        function applyBounceEffects() {
+            // Inner
+            const ai = settings.bounce.inner.action;
+            const si = settings.bounce.inner.step;
+            if (ai === 'color') {
+                ball.color = settings.bounce.inner.colorMode === 'random' ? getRandomColor() : shiftHue(ball.color, settings.bounce.inner.hueShift);
+            } else if (ai === 'sizePlus' || ai === 'sizeMinus') {
+                const delta = (ai === 'sizePlus' ? si : -si);
+                ball.radius = Math.max(2, Math.min(300, ball.radius + delta));
+            } else if (ai === 'sidesPlus' || ai === 'sidesMinus') {
+                if (!settings.inner.isCircle) {
+                    const d = (ai === 'sidesPlus' ? si : -si);
+                    settings.inner.corners = Math.max(3, Math.min(100, settings.inner.corners + d));
+                    innerCorners.value = settings.inner.corners;
+                    innerCornersValue.textContent = String(settings.inner.corners);
+                }
+            }
+
+            // Outer
+            const ao = settings.bounce.outer.action;
+            const so = settings.bounce.outer.step;
+            if (ao === 'color') {
+                settings.outer.color = settings.bounce.outer.colorMode === 'random' ? getRandomColor() : shiftHue(settings.outer.color, settings.bounce.outer.hueShift);
+            } else if (ao === 'sizePlus' || ao === 'sizeMinus') {
+                const delta = (ao === 'sizePlus' ? so : -so);
+                container.radius = Math.max(30, Math.min(350, container.radius + delta));
+                const dx = ball.x - container.x; const dy = ball.y - container.y;
+                const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                const maxDist = Math.max(0, container.radius - ball.radius - 2);
+                if (dist > maxDist) {
+                    const scale = maxDist / dist;
+                    ball.x = container.x + dx * scale;
+                    ball.y = container.y + dy * scale;
+                    ball.vx = 0; ball.vy = 0;
+                }
+            } else if (ao === 'sidesPlus' || ao === 'sidesMinus') {
+                if (!settings.outer.isCircle) {
+                    const d = (ao === 'sidesPlus' ? so : -so);
+                    settings.outer.corners = Math.max(3, Math.min(100, settings.outer.corners + d));
+                    outerCorners.value = settings.outer.corners;
+                    outerCornersValue.textContent = String(settings.outer.corners);
+                }
+            }
+        }
+
         function getPolygonPoints(x, y, radius, sides, rotation) {
             const points = [];
             for (let i = 0; i < sides; i++) {
