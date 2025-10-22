@@ -338,20 +338,18 @@
             </div>
 
             <div class="setting-group">
-                <h3>Bounce Reaction</h3>
-
+                <h3>Launch</h3>
                 <div class="setting-item">
-                    <label>Reacting Figure</label>
-                    <select id="bounceTarget">
-                        <option value="inner" selected>Inner</option>
-                        <option value="outer">Outer</option>
-                        <option value="both">Both</option>
-                    </select>
+                    <label>Initial Angle (deg): <span class="value-display" id="launchAngleValue">0</span></label>
+                    <input type="range" id="launchAngle" min="0" max="360" value="0">
                 </div>
+            </div>
 
+            <div class="setting-group">
+                <h3>Bounce Reaction — Inner</h3>
                 <div class="setting-item">
                     <label>Action</label>
-                    <select id="bounceAction">
+                    <select id="bounceActionInner">
                         <option value="none" selected>None</option>
                         <option value="color">Change Color</option>
                         <option value="sizePlus">Increase Size</option>
@@ -360,21 +358,49 @@
                         <option value="sidesMinus">Decrease Sides</option>
                     </select>
                 </div>
-
-                <div class="setting-item" id="bounceStepGroup">
-                    <label>Step: <span class="value-display" id="bounceStepValue">5</span></label>
-                    <input type="range" id="bounceStep" min="1" max="50" value="5">
+                <div class="setting-item" id="bounceStepGroupInner">
+                    <label>Step: <span class="value-display" id="bounceStepValueInner">5</span></label>
+                    <input type="range" id="bounceStepInner" min="1" max="50" value="5">
                 </div>
-
-                <div class="setting-item" id="bounceColorGroup" style="display:none;">
+                <div class="setting-item" id="bounceColorGroupInner" style="display:none;">
                     <label>Color Mode</label>
-                    <select id="bounceColorMode">
+                    <select id="bounceColorModeInner">
                         <option value="random" selected>Random</option>
                         <option value="shift">Shift Hue</option>
                     </select>
                     <div class="checkbox-group" style="margin-top:8px;">
-                        <label>Hue Shift: <span class="value-display" id="bounceHueShiftValue">30</span></label>
-                        <input type="range" id="bounceHueShift" min="1" max="180" value="30">
+                        <label>Hue Shift: <span class="value-display" id="bounceHueShiftValueInner">30</span></label>
+                        <input type="range" id="bounceHueShiftInner" min="1" max="180" value="30">
+                    </div>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <h3>Bounce Reaction — Outer</h3>
+                <div class="setting-item">
+                    <label>Action</label>
+                    <select id="bounceActionOuter">
+                        <option value="none" selected>None</option>
+                        <option value="color">Change Color</option>
+                        <option value="sizePlus">Increase Size</option>
+                        <option value="sizeMinus">Decrease Size</option>
+                        <option value="sidesPlus">Increase Sides</option>
+                        <option value="sidesMinus">Decrease Sides</option>
+                    </select>
+                </div>
+                <div class="setting-item" id="bounceStepGroupOuter">
+                    <label>Step: <span class="value-display" id="bounceStepValueOuter">5</span></label>
+                    <input type="range" id="bounceStepOuter" min="1" max="50" value="5">
+                </div>
+                <div class="setting-item" id="bounceColorGroupOuter" style="display:none;">
+                    <label>Color Mode</label>
+                    <select id="bounceColorModeOuter">
+                        <option value="random" selected>Random</option>
+                        <option value="shift">Shift Hue</option>
+                    </select>
+                    <div class="checkbox-group" style="margin-top:8px;">
+                        <label>Hue Shift: <span class="value-display" id="bounceHueShiftValueOuter">30</span></label>
+                        <input type="range" id="bounceHueShiftOuter" min="1" max="180" value="30">
                     </div>
                 </div>
             </div>
@@ -421,16 +447,28 @@
         const gravityInput = document.getElementById('gravity');
         const gravityValue = document.getElementById('gravityValue');
 
-        // Bounce controls
-        const bounceTarget = document.getElementById('bounceTarget');
-        const bounceAction = document.getElementById('bounceAction');
-        const bounceStep = document.getElementById('bounceStep');
-        const bounceStepValue = document.getElementById('bounceStepValue');
-        const bounceStepGroup = document.getElementById('bounceStepGroup');
-        const bounceColorGroup = document.getElementById('bounceColorGroup');
-        const bounceColorMode = document.getElementById('bounceColorMode');
-        const bounceHueShift = document.getElementById('bounceHueShift');
-        const bounceHueShiftValue = document.getElementById('bounceHueShiftValue');
+        // Launch
+        const launchAngle = document.getElementById('launchAngle');
+        const launchAngleValue = document.getElementById('launchAngleValue');
+
+        // Bounce controls (separate for inner/outer)
+        const bounceActionInner = document.getElementById('bounceActionInner');
+        const bounceStepInner = document.getElementById('bounceStepInner');
+        const bounceStepValueInner = document.getElementById('bounceStepValueInner');
+        const bounceStepGroupInner = document.getElementById('bounceStepGroupInner');
+        const bounceColorGroupInner = document.getElementById('bounceColorGroupInner');
+        const bounceColorModeInner = document.getElementById('bounceColorModeInner');
+        const bounceHueShiftInner = document.getElementById('bounceHueShiftInner');
+        const bounceHueShiftValueInner = document.getElementById('bounceHueShiftValueInner');
+
+        const bounceActionOuter = document.getElementById('bounceActionOuter');
+        const bounceStepOuter = document.getElementById('bounceStepOuter');
+        const bounceStepValueOuter = document.getElementById('bounceStepValueOuter');
+        const bounceStepGroupOuter = document.getElementById('bounceStepGroupOuter');
+        const bounceColorGroupOuter = document.getElementById('bounceColorGroupOuter');
+        const bounceColorModeOuter = document.getElementById('bounceColorModeOuter');
+        const bounceHueShiftOuter = document.getElementById('bounceHueShiftOuter');
+        const bounceHueShiftValueOuter = document.getElementById('bounceHueShiftValueOuter');
         
         let settings = {
             outer: {
@@ -451,12 +489,13 @@
             physics: {
                 gravity: 0.3
             },
+            launch: {
+                angleDeg: 0,
+                initialSpeed: 3
+            },
             bounce: {
-                target: 'inner',
-                action: 'none',
-                step: 5,
-                colorMode: 'random',
-                hueShift: 30
+                inner: { action: 'none', step: 5, colorMode: 'random', hueShift: 30 },
+                outer: { action: 'none', step: 5, colorMode: 'random', hueShift: 30 }
             }
         };
         
@@ -467,16 +506,29 @@
             ball.vy = 0;
         }
 
+        function restartSimulation() {
+            resetToDefaults();
+            initSimulation();
+        }
+
+        function softRestart() {
+            // keep current settings, just reset positions and velocity and start over
+            cancelAnimationFrame(rafId);
+            ball.x = container.x; ball.y = container.y; ball.rotation = 0;
+            setInitialVelocityByAngle();
+            rafId = requestAnimationFrame(animate);
+        }
+
         outerCorners.addEventListener('input', (e) => {
             settings.outer.corners = parseInt(e.target.value);
             outerCornersValue.textContent = e.target.value;
-            teleportBallToCenter();
+            teleportBallToCenter(); softRestart();
         });
         
         outerCircle.addEventListener('change', (e) => {
             settings.outer.isCircle = e.target.checked;
             outerCorners.disabled = e.target.checked;
-            teleportBallToCenter();
+            teleportBallToCenter(); softRestart();
         });
         
         lineWidth.addEventListener('input', (e) => {
@@ -497,14 +549,14 @@
         innerCorners.addEventListener('input', (e) => {
             settings.inner.corners = parseInt(e.target.value);
             innerCornersValue.textContent = e.target.value;
-            teleportBallToCenter();
+            teleportBallToCenter(); softRestart();
         });
         
         innerCircle.addEventListener('change', (e) => {
             settings.inner.isCircle = e.target.checked;
             innerCorners.disabled = e.target.checked;
             innerCornersValue.textContent = e.target.checked ? '0' : innerCorners.value;
-            teleportBallToCenter();
+            teleportBallToCenter(); softRestart();
         });
         
         innerLight.addEventListener('change', (e) => {
@@ -531,37 +583,33 @@
         gravityInput.addEventListener('input', (e) => {
             settings.physics.gravity = parseFloat(e.target.value);
             gravityValue.textContent = e.target.value;
+            softRestart();
+        });
+
+        launchAngle.addEventListener('input', (e) => {
+            settings.launch.angleDeg = parseInt(e.target.value);
+            launchAngleValue.textContent = e.target.value;
+            softRestart();
         });
 
         // Bounce UI handlers
-        bounceTarget.addEventListener('change', (e) => {
-            settings.bounce.target = e.target.value;
-        });
-
         function updateBounceControlsVisibility() {
-            const action = bounceAction.value;
-            bounceStepGroup.style.display = (action === 'sizePlus' || action === 'sizeMinus' || action === 'sidesPlus' || action === 'sidesMinus') ? 'block' : 'none';
-            bounceColorGroup.style.display = (action === 'color') ? 'block' : 'none';
+            const actionI = bounceActionInner.value;
+            const actionO = bounceActionOuter.value;
+            bounceStepGroupInner.style.display = (actionI === 'sizePlus' || actionI === 'sizeMinus' || actionI === 'sidesPlus' || actionI === 'sidesMinus') ? 'block' : 'none';
+            bounceColorGroupInner.style.display = (actionI === 'color') ? 'block' : 'none';
+            bounceStepGroupOuter.style.display = (actionO === 'sizePlus' || actionO === 'sizeMinus' || actionO === 'sidesPlus' || actionO === 'sidesMinus') ? 'block' : 'none';
+            bounceColorGroupOuter.style.display = (actionO === 'color') ? 'block' : 'none';
         }
 
-        bounceAction.addEventListener('change', (e) => {
-            settings.bounce.action = e.target.value;
-            updateBounceControlsVisibility();
-        });
-
-        bounceStep.addEventListener('input', (e) => {
-            settings.bounce.step = parseInt(e.target.value);
-            bounceStepValue.textContent = e.target.value;
-        });
-
-        bounceColorMode.addEventListener('change', (e) => {
-            settings.bounce.colorMode = e.target.value;
-        });
-
-        bounceHueShift.addEventListener('input', (e) => {
-            settings.bounce.hueShift = parseInt(e.target.value);
-            bounceHueShiftValue.textContent = e.target.value;
-        });
+        bounceActionInner.addEventListener('change', (e) => { settings.bounce.inner.action = e.target.value; updateBounceControlsVisibility(); });
+        bounceActionOuter.addEventListener('change', (e) => { settings.bounce.outer.action = e.target.value; updateBounceControlsVisibility(); });
+        bounceStepInner.addEventListener('input', (e) => { settings.bounce.inner.step = parseInt(e.target.value); bounceStepValueInner.textContent = e.target.value; });
+        bounceStepOuter.addEventListener('input', (e) => { settings.bounce.outer.step = parseInt(e.target.value); bounceStepValueOuter.textContent = e.target.value; });
+        bounceColorModeInner.addEventListener('change', (e) => { settings.bounce.inner.colorMode = e.target.value; });
+        bounceColorModeOuter.addEventListener('change', (e) => { settings.bounce.outer.colorMode = e.target.value; });
+        bounceHueShiftInner.addEventListener('input', (e) => { settings.bounce.inner.hueShift = parseInt(e.target.value); bounceHueShiftValueInner.textContent = e.target.value; });
+        bounceHueShiftOuter.addEventListener('input', (e) => { settings.bounce.outer.hueShift = parseInt(e.target.value); bounceHueShiftValueOuter.textContent = e.target.value; });
         
         function getRandomColor() {
             const hue = Math.random() * 360;
@@ -603,11 +651,88 @@
             rotation: 0
         };
         
+        let rafId = null;
+
+        function setInitialVelocityByAngle() {
+            const angleRad = (settings.launch.angleDeg * Math.PI) / 180;
+            const speed = settings.launch.initialSpeed;
+            ball.vx = Math.cos(angleRad) * speed;
+            ball.vy = Math.sin(angleRad) * speed;
+        }
+
+        function resetToDefaults() {
+            // Default state
+            settings.outer.corners = 4;
+            settings.outer.isCircle = false;
+            settings.outer.lineWidth = 8;
+            settings.outer.light = true;
+            settings.outer.lightRadius = 20;
+            settings.outer.color = '#ffffff';
+
+            settings.inner.corners = 3;
+            settings.inner.isCircle = true;
+            settings.inner.light = true;
+            settings.inner.lightRadius = 15;
+            settings.inner.randomColor = 'off';
+
+            settings.physics.gravity = 0.3;
+
+            settings.launch.angleDeg = 0;
+            settings.launch.initialSpeed = 3;
+
+            // Sync UI
+            outerCorners.value = settings.outer.corners; outerCornersValue.textContent = String(settings.outer.corners);
+            outerCircle.checked = settings.outer.isCircle; outerCorners.disabled = settings.outer.isCircle;
+            lineWidth.value = settings.outer.lineWidth; lineWidthValue.textContent = String(settings.outer.lineWidth);
+            outerLight.value = settings.outer.light ? 'on' : 'off';
+            outerLightRadius.value = settings.outer.lightRadius; outerLightRadiusValue.textContent = String(settings.outer.lightRadius);
+            outerLightRadiusGroup.style.display = settings.outer.light ? 'block' : 'none';
+
+            innerCorners.value = settings.inner.corners; innerCorners.disabled = settings.inner.isCircle; innerCornersValue.textContent = settings.inner.isCircle ? '0' : String(settings.inner.corners);
+            innerCircle.checked = settings.inner.isCircle;
+            innerLight.value = settings.inner.light ? 'on' : 'off';
+            innerLightRadius.value = settings.inner.lightRadius; innerLightRadiusValue.textContent = String(settings.inner.lightRadius);
+            innerLightRadiusGroup.style.display = settings.inner.light ? 'block' : 'none';
+            randomColorInputs.forEach(n => { n.checked = (n.value === settings.inner.randomColor); });
+
+            gravityInput.value = settings.physics.gravity; gravityValue.textContent = String(settings.physics.gravity);
+
+            launchAngle.value = settings.launch.angleDeg; launchAngleValue.textContent = String(settings.launch.angleDeg);
+
+            // Bounce UI defaults
+            bounceActionInner.value = settings.bounce.inner.action;
+            bounceStepInner.value = settings.bounce.inner.step; bounceStepValueInner.textContent = String(settings.bounce.inner.step);
+            bounceColorModeInner.value = settings.bounce.inner.colorMode;
+            bounceHueShiftInner.value = settings.bounce.inner.hueShift; bounceHueShiftValueInner.textContent = String(settings.bounce.inner.hueShift);
+
+            bounceActionOuter.value = settings.bounce.outer.action;
+            bounceStepOuter.value = settings.bounce.outer.step; bounceStepValueOuter.textContent = String(settings.bounce.outer.step);
+            bounceColorModeOuter.value = settings.bounce.outer.colorMode;
+            bounceHueShiftOuter.value = settings.bounce.outer.hueShift; bounceHueShiftValueOuter.textContent = String(settings.bounce.outer.hueShift);
+
+            updateBounceControlsVisibility();
+        }
+
         function initSimulation() {
+            cancelAnimationFrame(rafId);
+            // Reset positions and rotation
+            ball.x = canvas.width / 2;
+            ball.y = canvas.height / 2 - 100;
+            ball.radius = 15;
+            ball.rotation = 0;
+            container.x = canvas.width / 2;
+            container.y = canvas.height / 2;
+            container.radius = 250;
+            container.rotation = 0;
+
             if (settings.inner.randomColor === 'onStart') {
                 ball.color = getRandomColor();
+            } else {
+                ball.color = '#ffffff';
             }
-            animate();
+
+            setInitialVelocityByAngle();
+            rafId = requestAnimationFrame(animate);
         }
         
         function getPolygonPoints(x, y, radius, sides, rotation) {
@@ -747,47 +872,46 @@
         }
         
         function applyBounceEffects() {
-            const targets = settings.bounce.target === 'both' ? ['inner', 'outer'] : [settings.bounce.target];
-            const action = settings.bounce.action;
-            const step = settings.bounce.step;
+            // Inner
+            const ai = settings.bounce.inner.action;
+            const si = settings.bounce.inner.step;
+            if (ai === 'color') {
+                ball.color = settings.bounce.inner.colorMode === 'random' ? getRandomColor() : shiftHue(ball.color, settings.bounce.inner.hueShift);
+            } else if (ai === 'sizePlus' || ai === 'sizeMinus') {
+                const delta = (ai === 'sizePlus' ? si : -si);
+                ball.radius = Math.max(2, Math.min(300, ball.radius + delta));
+            } else if (ai === 'sidesPlus' || ai === 'sidesMinus') {
+                if (!settings.inner.isCircle) {
+                    const d = (ai === 'sidesPlus' ? si : -si);
+                    settings.inner.corners = Math.max(3, Math.min(100, settings.inner.corners + d));
+                    innerCorners.value = settings.inner.corners;
+                    innerCornersValue.textContent = String(settings.inner.corners);
+                }
+            }
 
-            for (const t of targets) {
-                if (action === 'color') {
-                    if (t === 'inner') {
-                        ball.color = settings.bounce.colorMode === 'random' ? getRandomColor() : shiftHue(ball.color, settings.bounce.hueShift);
-                    } else if (t === 'outer') {
-                        settings.outer.color = settings.bounce.colorMode === 'random' ? getRandomColor() : shiftHue(settings.outer.color, settings.bounce.hueShift);
-                    }
-                } else if (action === 'sizePlus' || action === 'sizeMinus') {
-                    const delta = (action === 'sizePlus' ? step : -step);
-                    if (t === 'inner') {
-                        ball.radius = Math.max(2, Math.min(300, ball.radius + delta));
-                    } else if (t === 'outer') {
-                        container.radius = Math.max(30, Math.min(350, container.radius + delta));
-                        // Keep ball inside after container shrink
-                        const dx = ball.x - container.x;
-                        const dy = ball.y - container.y;
-                        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-                        const maxDist = Math.max(0, container.radius - ball.radius - 2);
-                        if (dist > maxDist) {
-                            const scale = maxDist / dist;
-                            ball.x = container.x + dx * scale;
-                            ball.y = container.y + dy * scale;
-                            ball.vx = 0; ball.vy = 0;
-                        }
-                    }
-                } else if (action === 'sidesPlus' || action === 'sidesMinus') {
-                    const deltaSides = (action === 'sidesPlus' ? step : -step);
-                    if (t === 'inner' && !settings.inner.isCircle) {
-                        settings.inner.corners = Math.max(3, Math.min(100, settings.inner.corners + deltaSides));
-                        innerCorners.value = settings.inner.corners;
-                        innerCornersValue.textContent = String(settings.inner.corners);
-                    }
-                    if (t === 'outer' && !settings.outer.isCircle) {
-                        settings.outer.corners = Math.max(3, Math.min(100, settings.outer.corners + deltaSides));
-                        outerCorners.value = settings.outer.corners;
-                        outerCornersValue.textContent = String(settings.outer.corners);
-                    }
+            // Outer
+            const ao = settings.bounce.outer.action;
+            const so = settings.bounce.outer.step;
+            if (ao === 'color') {
+                settings.outer.color = settings.bounce.outer.colorMode === 'random' ? getRandomColor() : shiftHue(settings.outer.color, settings.bounce.outer.hueShift);
+            } else if (ao === 'sizePlus' || ao === 'sizeMinus') {
+                const delta = (ao === 'sizePlus' ? so : -so);
+                container.radius = Math.max(30, Math.min(350, container.radius + delta));
+                const dx = ball.x - container.x; const dy = ball.y - container.y;
+                const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                const maxDist = Math.max(0, container.radius - ball.radius - 2);
+                if (dist > maxDist) {
+                    const scale = maxDist / dist;
+                    ball.x = container.x + dx * scale;
+                    ball.y = container.y + dy * scale;
+                    ball.vx = 0; ball.vy = 0;
+                }
+            } else if (ao === 'sidesPlus' || ao === 'sidesMinus') {
+                if (!settings.outer.isCircle) {
+                    const d = (ao === 'sidesPlus' ? so : -so);
+                    settings.outer.corners = Math.max(3, Math.min(100, settings.outer.corners + d));
+                    outerCorners.value = settings.outer.corners;
+                    outerCornersValue.textContent = String(settings.outer.corners);
                 }
             }
         }
